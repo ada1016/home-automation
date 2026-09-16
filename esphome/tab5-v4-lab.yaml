@@ -24,7 +24,7 @@ esphome:
         - logger.log:
             level: INFO
             tag: ui
-            format: "BUILD MARKER: TAB5_V4_ALL_ROOMS"
+            format: "BUILD MARKER: TAB5_V4.1_IDLE_POWER"
         - delay: 2s
         - script.execute:
             id: apply_theme
@@ -63,6 +63,9 @@ esp32_hosted:
 
 logger:
   hardware_uart: USB_SERIAL_JTAG
+  # The default DEBUG stream is noisy on an always-on wall panel.  Keep
+  # warnings/errors for diagnosis without continuously formatting USB logs.
+  level: WARN
 
 psram:
   mode: hex

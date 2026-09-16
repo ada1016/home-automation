@@ -44,21 +44,18 @@ interval:
                   action: !lambda 'return id(v4_action);'
                   device: !lambda 'return id(v4_device);'
                   value: !lambda 'return id(v4_value);'
-  - interval: 250ms
+  # Commands and incoming state packets already refresh feedback immediately.
+  # This is only a safety repaint for expired pending states, so one second is
+  # sufficient and avoids repeated LVGL work while the panel is idle.
+  - interval: 1s
     then:
       - script.execute: v4_feedback
-  - interval: 30s
-    then:
-      - if:
-          condition:
-            api.connected:
-              state_subscription_only: true
-          then:
-            - script.execute: v4_resync
 
 script:
   - id: v4_resync
-    mode: restart
+    # The connection check runs frequently.  Single prevents it from endlessly
+    # restarting this delay before an initial refresh can be sent.
+    mode: single
     then:
       - delay: 1s
       - homeassistant.event:

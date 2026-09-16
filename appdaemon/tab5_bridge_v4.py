@@ -123,7 +123,11 @@ class Tab5V4Bridge(hass.Hass):
         )
 
         self.run_in(self._bootstrap_publish, 1)
-        self.run_every(self._bootstrap_publish, "now+30", 30)
+        # Entity listeners publish real changes immediately.  A periodic
+        # snapshot is only reconciliation for missed events/reconnects; doing
+        # it every 30 seconds generated a continuous stream of 12+ packets to
+        # the battery-powered panel while it was idle.
+        self.run_every(self._bootstrap_publish, "now+300", 300)
 
         self.log("Tab5 V4 experimental thin bridge READY")
         self.log("Room/page/group definitions are local on ESPHome.")

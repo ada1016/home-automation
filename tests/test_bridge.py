@@ -49,7 +49,7 @@ class TestBridge(unittest.TestCase):
         self.b.run_every=lambda callback,start,interval: recurring.append(interval)
         self.b.initialize()
         self.assertEqual(events,['esphome.tab5_v4_command'])
-        self.assertEqual(recurring,[30])
+        self.assertEqual(recurring,[300])
         self.assertEqual(len(subscriptions),13)  # 12 devices + existing gas helper
         self.assertFalse(self.calls)
 
