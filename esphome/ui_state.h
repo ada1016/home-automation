@@ -173,7 +173,7 @@ class State {
       out.ready++;
       if(d.fields[3]=="climate") {
         bool on=d.fields[4]!="off";
-        if(d.pending && d.action=="ac_power") on=d.requested=="on";
+        if(d.pending && d.action=="ac_power") on=d.requested!="off";
         out.on+=on;
         float target;
         if(number(d.pending && d.action=="ac_set_temperature"?d.requested:d.fields[6],target)) {
@@ -212,7 +212,9 @@ class State {
     }
     if(action=="ac_power_toggle" || action=="light_group_toggle") {
       action=action=="ac_power_toggle"?"ac_power":"light_power";
-      value=sum.on?"off":"on";
+      // For AC power-on, retain the settings payload (temperature|fan|mode).
+      // Legacy callers with an empty value retain the old safe defaults.
+      value=sum.on?"off":(value.empty()?"26.0|Auto|cool":value);
     }
     Operation op;
     for(const auto &key:keys(csv)) {
@@ -269,7 +271,12 @@ class State {
   }
   bool matches(const Device &d) const {
     const auto &f=d.fields;
-    if(d.action=="ac_power") return d.requested=="off" ? f[4]=="off" : f[4]=="cool";
+    if(d.action=="ac_power") {
+      if(d.requested=="off") return f[4]=="off";
+      const size_t last=d.requested.rfind('|');
+      const std::string mode=last==std::string::npos?"cool":d.requested.substr(last+1);
+      return f[4]==mode;
+    }
     if(d.action=="ac_fan_auto") return f[5]=="Auto";
     if(d.action=="ac_fan_quiet") return f[5]=="Quiet";
     if(d.action=="light_power") return f[4]==(d.requested=="on"?"1":"0");

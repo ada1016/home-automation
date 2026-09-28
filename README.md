@@ -1,6 +1,6 @@
 # Tab5 V4 — Home Assistant dashboard
 
-Current all-room firmware for M5Stack Tab5: 客廳、爹娘、宸、芹、全部. The current source revision is `TAB5_V4.1_IDLE_POWER`, which reduces idle bridge traffic, UI refresh work, and log output. Built with ESPHome 2026.8.2 / ESP-IDF 5.5.5. Physical device and UX acceptance remains a manual check.
+Current all-room firmware for M5Stack Tab5: 客廳、爹娘、宸、芹、全部. The current source revision is `TAB5_V4.2.2_RECOVERY_TOUCH`, which adds persistent AC power-on defaults and a refined settings panel while retaining idle-traffic reductions. Built with ESPHome 2026.8.2 / ESP-IDF 5.5.5. Physical device and UX acceptance remains a manual check.
 
 For a portable architecture, capability, deployment, and handoff reference, see [PROJECT_DESCRIPTION.md](PROJECT_DESCRIPTION.md).
 

@@ -67,6 +67,19 @@ class TestBridge(unittest.TestCase):
         for _ in range(2): self.command(action='ac_power', device='ac_living', value='off')
         self.assertEqual([c[0] for c in self.calls], ['climate/turn_off'] * 2)
 
+    def test_power_on_uses_validated_tablet_defaults(self):
+        self.command(action='ac_power', device='ac_living', value='25.5|Quiet|dry')
+        self.assertEqual(self.calls[0], ('climate/set_temperature', {
+            'entity_id': ['climate.living'], 'temperature': 25.5, 'hvac_mode': 'dry'
+        }))
+        self.assertEqual(self.calls[1], ('climate/set_fan_mode', {
+            'entity_id': ['climate.living'], 'fan_mode': 'Quiet'
+        }))
+
+    def test_power_on_rejects_invalid_defaults(self):
+        self.command(action='ac_power', device='ac_living', value='17|Turbo|heat')
+        self.assertFalse(self.calls)
+
     def test_absolute_temperature(self):
         self.command(action='ac_set_temperature', device='ac_living', value='27.5')
         self.assertEqual(self.calls[0][1]['temperature'], 27.5)

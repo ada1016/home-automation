@@ -24,11 +24,12 @@ esphome:
         - logger.log:
             level: INFO
             tag: ui
-            format: "BUILD MARKER: TAB5_V4.1_IDLE_POWER"
+            format: "BUILD MARKER: TAB5_V4.2.2_RECOVERY_TOUCH"
         - delay: 2s
         - script.execute:
             id: apply_theme
             theme: !lambda 'return id(theme_index);'
+        - script.execute: sync_ac_defaults
         - script.execute: open_house
         - homeassistant.event:
             event: esphome.tab5_v4_command
@@ -453,6 +454,24 @@ globals:
     type: bool
     restore_value: no
     initial_value: 'false'
+
+  # Defaults applied whenever an AC is turned on from a room or House page.
+  # These are deliberately tablet-local preferences, not a replacement for
+  # Home Assistant climate state.
+  - id: ac_default_temp
+    type: float
+    restore_value: yes
+    initial_value: '26.0'
+
+  - id: ac_default_fan
+    type: std::string
+    restore_value: yes
+    initial_value: '"Auto"'
+
+  - id: ac_default_mode
+    type: std::string
+    restore_value: yes
+    initial_value: '"cool"'
 
   - id: active_view
     type: std::string
@@ -897,6 +916,19 @@ sensor:
 # TAB5 HARDWARE OFF
 # ============================================================
 script:
+  - id: sync_ac_defaults
+    mode: restart
+    then:
+      - lambda: |-
+          char temp[12];
+          snprintf(temp, sizeof(temp), "%.1f°C", id(ac_default_temp));
+          lv_label_set_text(id(ac_default_temp_value), temp);
+          lv_dropdown_set_selected(id(ac_default_fan_dropdown)->obj,
+            id(ac_default_fan) == "Quiet" ? 1 : 0);
+          const auto &mode = id(ac_default_mode);
+          lv_dropdown_set_selected(id(ac_default_mode_dropdown)->obj,
+            mode == "dry" ? 1 : (mode == "fan_only" ? 2 : 0));
+
   - id: tab5_hardware_power_off
     mode: single
     then:
@@ -1374,7 +1406,6 @@ script:
 
           lv_obj_set_style_text_color(id(settings_nav_icon),   icon_color, LV_PART_MAIN);
           lv_obj_set_style_text_color(id(settings_title_icon), icon_color, LV_PART_MAIN);
-          lv_obj_set_style_text_color(id(settings_reload_icon), icon_color, LV_PART_MAIN);
           lv_obj_set_style_text_color(id(ac_unit_icon),        icon_color, LV_PART_MAIN);
           lv_obj_set_style_text_color(id(ac_plus_icon),        icon_color, LV_PART_MAIN);
           lv_obj_set_style_text_color(id(ac_minus_icon),       icon_color, LV_PART_MAIN);
@@ -1965,7 +1996,12 @@ lvgl:
                               id: v4_command
                               action: ac_power_toggle
                               device: !lambda 'return tab5_v4::ALL_AC;'
-                              value: ""
+                              value: !lambda |-
+                                char defaults[32];
+                                snprintf(defaults, sizeof(defaults), "%.1f|%s|%s",
+                                  id(ac_default_temp), id(ac_default_fan).c_str(),
+                                  id(ac_default_mode).c_str());
+                                return std::string(defaults);
               # ======================================================
               # MIDDLE LEFT — ALL HOUSE LIGHTS (light_group)
               # ======================================================
@@ -2186,135 +2222,144 @@ lvgl:
               - label:
                   x: 100
                   y: 28
-                  text: "THEME"
+                  text: "AC DEFAULTS"
                   text_font: montserrat_32
                   text_color: 0x111111
 
               - label:
-                  x: 410
-                  y: 34
-                  text: "ACTIVE:"
-                  text_font: montserrat_18
+                  x: 100
+                  y: 70
+                  text: "Applied whenever a room or House AC is turned on"
+                  text_font: montserrat_16
                   text_color: 0x555555
 
-              - label:
-                  id: current_theme_label
-                  x: 505
-                  y: 30
-                  width: 120
-                  text: "MONO"
-                  text_font: montserrat_22
-                  text_color: 0x111111
-                  text_align: RIGHT
-
-              - button:
-                  id: theme_mono_button
+              - obj:
                   x: 55
-                  y: 150
-                  width: 250
-                  height: 150
-                  styles: mono_button
-                  border_width: 5
-                  widgets:
-                    - label:
-                        align: CENTER
-                        text: "MONO"
-                        text_font: montserrat_32
-                        text_color: 0x111111
-                  on_click:
-                    - script.execute:
-                        id: apply_theme
-                        theme: 0
-
-              - button:
-                  id: theme_warm_button
-                  x: 345
-                  y: 150
-                  width: 250
-                  height: 150
-                  styles: mono_button
-                  widgets:
-                    - label:
-                        align: CENTER
-                        text: "WARM"
-                        text_font: montserrat_32
-                        text_color: 0x111111
-                  on_click:
-                    - script.execute:
-                        id: apply_theme
-                        theme: 1
-
-              - button:
-                  id: theme_ocean_button
-                  x: 55
-                  y: 340
-                  width: 250
-                  height: 150
-                  styles: mono_button
-                  widgets:
-                    - label:
-                        align: CENTER
-                        text: "OCEAN"
-                        text_font: montserrat_32
-                        text_color: 0x111111
-                  on_click:
-                    - script.execute:
-                        id: apply_theme
-                        theme: 2
-
-              - button:
-                  id: theme_dark_button
-                  x: 345
-                  y: 340
-                  width: 250
-                  height: 150
-                  styles: mono_button
-                  widgets:
-                    - label:
-                        align: CENTER
-                        text: "DARK"
-                        text_font: montserrat_32
-                        text_color: 0x111111
-                  on_click:
-                    - script.execute:
-                        id: apply_theme
-                        theme: 3
-
-              - label:
-                  x: 55
-                  y: 555
+                  y: 105
                   width: 540
-                  text: "Themes are applied locally on Tab5.\nNo AppDaemon change or firmware rebuild is needed to switch between these four installed palettes."
-                  text_font: montserrat_18
-                  text_color: 0x555555
-                  long_mode: WRAP
+                  height: 215
+                  bg_opa: TRANSP
+                  border_color: 0x555555
+                  border_width: 2
+                  radius: 8
+                  pad_all: 0
+                  widgets:
+                    - label:
+                        x: 20
+                        y: 16
+                        width: 290
+                        text: "DEFAULT TEMPERATURE"
+                        text_font: montserrat_16
+                        text_color: 0x555555
+                        text_align: CENTER
+                    - button:
+                        x: 20
+                        y: 48
+                        width: 70
+                        height: 72
+                        styles: mono_button
+                        # Use ASCII hyphen: the mathematical-minus glyph is
+                        # absent from the installed Montserrat subset.
+                        widgets: [ { label: { align: CENTER, text: "-", text_font: montserrat_48, text_color: 0x111111 } } ]
+                        on_click:
+                          - lambda: |-
+                              id(ac_default_temp) = std::max(18.0f, id(ac_default_temp) - 0.5f);
+                          - script.execute: sync_ac_defaults
+                    - label:
+                        id: ac_default_temp_value
+                        x: 95
+                        y: 65
+                        width: 140
+                        text: "26.0°C"
+                        text_font: montserrat_32
+                        text_color: 0x111111
+                        text_align: CENTER
+                    - button:
+                        x: 240
+                        y: 48
+                        width: 70
+                        height: 72
+                        styles: mono_button
+                        widgets: [ { label: { align: CENTER, text: "+", text_font: montserrat_48, text_color: 0x111111 } } ]
+                        on_click:
+                          - lambda: |-
+                              id(ac_default_temp) = std::min(30.0f, id(ac_default_temp) + 0.5f);
+                          - script.execute: sync_ac_defaults
+                    - label:
+                        x: 325
+                        y: 16
+                        width: 190
+                        text: "DEFAULT FAN"
+                        text_font: montserrat_16
+                        text_color: 0x555555
+                        text_align: CENTER
+                    - dropdown:
+                        id: ac_default_fan_dropdown
+                        x: 325
+                        y: 48
+                        width: 190
+                        height: 72
+                        options: [ "Auto", "Quiet" ]
+                        selected_index: 0
+                        text_font: montserrat_22
+                        text_color: 0x111111
+                        bg_color: 0xE7E7E7
+                        border_color: 0x555555
+                        border_width: 2
+                        on_value:
+                          - lambda: |-
+                              id(ac_default_fan) = x == 1 ? "Quiet" : "Auto";
+                    - label:
+                        x: 20
+                        y: 135
+                        width: 495
+                        text: "DEFAULT MODE"
+                        text_font: montserrat_16
+                        text_color: 0x555555
+                        text_align: CENTER
+                    - dropdown:
+                        id: ac_default_mode_dropdown
+                        x: 20
+                        y: 160
+                        width: 495
+                        height: 43
+                        options: [ "Cool", "Dry", "Fan Only" ]
+                        selected_index: 0
+                        text_font: montserrat_22
+                        text_color: 0x111111
+                        bg_color: 0xE7E7E7
+                        border_color: 0x555555
+                        border_width: 2
+                        on_value:
+                          - lambda: |-
+                              id(ac_default_mode) = x == 1 ? "dry" : (x == 2 ? "fan_only" : "cool");
 
               # ------------------------------------------------
               # Xiaomi Home manual recovery
-              # Left: wifi_home reload button
-              # Right: live availability / recovery message
+              # Full-width status row leaves room for future device status.
               # ------------------------------------------------
-              - label:
-                  x: 55
-                  y: 665
-                  text: "DEVICE RECOVERY"
-                  text_font: montserrat_22
-                  text_color: 0x555555
-
               - button:
                   id: xiaomi_reload_button
                   x: 55
-                  y: 710
-                  width: 150
-                  height: 150
-                  styles: mono_button
+                  y: 342
+                  width: 360
+                  height: 54
+                  bg_opa: TRANSP
+                  border_opa: TRANSP
+                  shadow_opa: TRANSP
                   widgets:
                     - label:
-                        id: settings_reload_icon
-                        align: CENTER
-                        text: "\U0000F671"
-                        text_font: fa_64
-                        text_color: 0x111111
+                        x: 0
+                        y: 8
+                        text: "DEVICE RECOVERY"
+                        text_font: montserrat_26
+                        text_color: 0x555555
+                    - label:
+                        x: 245
+                        y: 14
+                        text: "TAP TO REFRESH"
+                        text_font: montserrat_14
+                        text_color: 0x777777
                   on_click:
                     - lambda: |-
                         lv_label_set_text(
@@ -2327,26 +2372,97 @@ lvgl:
                           action: "reload_xiaomi"
 
               - obj:
-                  x: 230
-                  y: 710
-                  width: 365
-                  height: 150
+                  x: 55
+                  y: 415
+                  width: 540
+                  height: 155
                   bg_opa: TRANSP
                   border_color: 0x555555
                   border_width: 2
                   radius: 8
-                  pad_all: 14
+                  pad_all: 16
                   widgets:
                     - label:
                         id: device_recovery_message
                         x: 0
                         y: 0
-                        width: 335
-                        height: 120
+                        width: 508
+                        height: 123
                         text: "Checking Xiaomi Home device availability..."
-                        text_font: montserrat_18
+                        text_font: montserrat_22
                         text_color: 0x111111
                         long_mode: WRAP
+
+              # Compact palette choices stay at the bottom: a radio-style
+              # single selection, with the active choice marked by its border.
+              - label:
+                  x: 55
+                  y: 625
+                  text: "COLOR THEME"
+                  text_font: montserrat_22
+                  text_color: 0x555555
+
+              - label:
+                  x: 410
+                  y: 627
+                  text: "ACTIVE:"
+                  text_font: montserrat_16
+                  text_color: 0x555555
+
+              - label:
+                  id: current_theme_label
+                  x: 495
+                  y: 622
+                  width: 100
+                  text: "MONO"
+                  text_font: montserrat_18
+                  text_color: 0x111111
+                  text_align: RIGHT
+
+              - button:
+                  id: theme_mono_button
+                  x: 55
+                  y: 675
+                  width: 125
+                  height: 78
+                  styles: mono_button
+                  border_width: 5
+                  widgets: [ { label: { align: CENTER, text: "MONO", text_font: montserrat_18, text_color: 0x111111 } } ]
+                  on_click:
+                    - script.execute: { id: apply_theme, theme: 0 }
+
+              - button:
+                  id: theme_warm_button
+                  x: 190
+                  y: 675
+                  width: 125
+                  height: 78
+                  styles: mono_button
+                  widgets: [ { label: { align: CENTER, text: "WARM", text_font: montserrat_18, text_color: 0x111111 } } ]
+                  on_click:
+                    - script.execute: { id: apply_theme, theme: 1 }
+
+              - button:
+                  id: theme_ocean_button
+                  x: 325
+                  y: 675
+                  width: 125
+                  height: 78
+                  styles: mono_button
+                  widgets: [ { label: { align: CENTER, text: "OCEAN", text_font: montserrat_18, text_color: 0x111111 } } ]
+                  on_click:
+                    - script.execute: { id: apply_theme, theme: 2 }
+
+              - button:
+                  id: theme_dark_button
+                  x: 460
+                  y: 675
+                  width: 135
+                  height: 78
+                  styles: mono_button
+                  widgets: [ { label: { align: CENTER, text: "DARK", text_font: montserrat_18, text_color: 0x111111 } } ]
+                  on_click:
+                    - script.execute: { id: apply_theme, theme: 3 }
 
         - obj:
             id: gas_panel

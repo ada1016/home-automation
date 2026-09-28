@@ -99,4 +99,9 @@ obj:
               id: v4_command
               action: ac_power_toggle
               device: !lambda 'return id(active_ac_device);'
-              value: ""
+              value: !lambda |-
+                char defaults[32];
+                snprintf(defaults, sizeof(defaults), "%.1f|%s|%s",
+                  id(ac_default_temp), id(ac_default_fan).c_str(),
+                  id(ac_default_mode).c_str());
+                return std::string(defaults);

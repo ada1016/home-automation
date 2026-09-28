@@ -521,12 +521,40 @@ class Tab5V4Bridge(hass.Hass):
                 )
 
             elif action == "ac_power":
-                if str(data.get("value")) == "off":
+                requested = str(data.get("value", "")).strip()
+                if requested == "off":
                     self.call_service("climate/turn_off", entity_id=[e for _k, e in resolved])
-                elif str(data.get("value")) == "on":
-                    self.call_service("climate/set_hvac_mode", entity_id=[e for _k, e in resolved], hvac_mode="cool")
                 else:
-                    return
+                    # V4.2 payload: temperature|fan mode|HVAC mode.  Keep the
+                    # old "on" command compatible with the historical defaults.
+                    temperature, fan_mode, hvac_mode = 26.0, "Auto", "cool"
+                    if requested and requested != "on":
+                        parts = requested.split("|")
+                        if len(parts) != 3:
+                            return
+                        try:
+                            temperature = float(parts[0])
+                        except (TypeError, ValueError):
+                            return
+                        fan_mode, hvac_mode = parts[1], parts[2]
+                    if not 18.0 <= temperature <= 30.0:
+                        return
+                    if fan_mode not in ("Auto", "Quiet"):
+                        return
+                    if hvac_mode not in ("cool", "dry", "fan_only"):
+                        return
+                    entity_ids = [entity_id for _key, entity_id in resolved]
+                    self.call_service(
+                        "climate/set_temperature",
+                        entity_id=entity_ids,
+                        temperature=temperature,
+                        hvac_mode=hvac_mode,
+                    )
+                    self.call_service(
+                        "climate/set_fan_mode",
+                        entity_id=entity_ids,
+                        fan_mode=fan_mode,
+                    )
 
             elif action == "ac_power_toggle":
                 any_on = any(
