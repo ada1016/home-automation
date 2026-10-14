@@ -24,7 +24,7 @@ esphome:
         - logger.log:
             level: INFO
             tag: ui
-            format: "BUILD MARKER: TAB5_V4.2.2_RECOVERY_TOUCH"
+            format: "BUILD MARKER: TAB5_V4.3.0_CHARGING_STANDBY"
         - delay: 2s
         - script.execute:
             id: apply_theme
@@ -932,21 +932,32 @@ script:
   - id: tab5_hardware_power_off
     mode: single
     then:
-      - light.turn_off:
-          id: display_backlight
-          transition_length: 100ms
-      - delay: 150ms
-      - switch.turn_on: tab5_poweroff_pulse
-      - delay: 100ms
-      - switch.turn_off: tab5_poweroff_pulse
-      - delay: 100ms
-      - switch.turn_on: tab5_poweroff_pulse
-      - delay: 100ms
-      - switch.turn_off: tab5_poweroff_pulse
-      - delay: 100ms
-      - switch.turn_on: tab5_poweroff_pulse
-      - delay: 100ms
-      - switch.turn_off: tab5_poweroff_pulse
+      # External power should leave the dashboard ready for an immediate touch
+      # wake.  The hardware power-off pulse is only safe/useful on battery.
+      - if:
+          condition:
+            binary_sensor.is_on: charging
+          then:
+            - light.turn_off:
+                id: display_backlight
+                transition_length: 100ms
+            - lvgl.pause:
+          else:
+            - light.turn_off:
+                id: display_backlight
+                transition_length: 100ms
+            - delay: 150ms
+            - switch.turn_on: tab5_poweroff_pulse
+            - delay: 100ms
+            - switch.turn_off: tab5_poweroff_pulse
+            - delay: 100ms
+            - switch.turn_on: tab5_poweroff_pulse
+            - delay: 100ms
+            - switch.turn_off: tab5_poweroff_pulse
+            - delay: 100ms
+            - switch.turn_on: tab5_poweroff_pulse
+            - delay: 100ms
+            - switch.turn_off: tab5_poweroff_pulse
 
   # ----------------------------------------------------------
   # V3 GENERIC ROOM RENDERER

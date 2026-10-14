@@ -16,7 +16,7 @@ It also retains a gas-meter submission UI and a Xiaomi Home recovery action.
 
 ## Current source revision
 
-The current source revision is **`TAB5_V4.2.2_RECOVERY_TOUCH`**.
+The current source revision is **`TAB5_V4.3.0_CHARGING_STANDBY`**.
 
 It builds on the earlier all-room release and adds conservative idle-power improvements:
 
@@ -27,6 +27,7 @@ It builds on the earlier all-room release and adds conservative idle-power impro
 - The connection resync script is `single` rather than continually restarting its own delay.
 - Persistent AC defaults (temperature, Auto/Quiet fan, and Cool/Dry/Fan Only mode) are applied when an AC is turned on from either a room or House page.
 - The settings panel prioritizes AC defaults, gives Device Recovery a larger middle section, and uses compact theme choices at the bottom.
+- Hardware power-off is charging-aware: while USB/external power is present, it blanks the display and pauses LVGL for touch-wake standby; on battery, it retains the existing hardware power-off pulse sequence.
 
 The checked-in `firmware/manifest.json` documents the earlier all-room binary, not a binary for this source revision. Firmware binaries and raw logs are intentionally not committed.
 
