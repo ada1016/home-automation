@@ -1,0 +1,7 @@
+.DS_Store
+.gradle/
+.kotlin/
+app/build/
+hs_err_pid*.log
+tv-*.txt
+tcl-input-activities.txt

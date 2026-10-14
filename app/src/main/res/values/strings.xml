@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">TCL Remote Mapper</string>
+    <string name="accessibility_description">Maps selected TCL remote buttons and records key events for personal TV diagnostics.</string>
+</resources>

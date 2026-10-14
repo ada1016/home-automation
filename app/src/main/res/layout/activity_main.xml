@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:padding="32dp" android:background="#101418">
+    <TextView android:id="@+id/title" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="TCL Remote Diagnostics" android:textSize="30sp" android:textColor="#FFFFFF" />
+    <TextView android:id="@+id/status" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:textColor="#B9C5CE" android:textSize="18sp" />
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:orientation="horizontal">
+        <Button android:id="@+id/open_accessibility" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Enable diagnostics" />
+        <Button android:id="@+id/refresh" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="16dp" android:text="Refresh" />
+        <Button android:id="@+id/clear" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="16dp" android:text="Clear log" />
+    </LinearLayout>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:orientation="horizontal" android:gravity="center_vertical">
+        <androidx.appcompat.widget.SwitchCompat android:id="@+id/mapping_enabled" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Enable Prime mapping" android:textColor="#FFFFFF" android:textSize="18sp" />
+        <Button android:id="@+id/select_input" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="20dp" android:text="Select input" />
+    </LinearLayout>
+    <TextView android:id="@+id/mapping_status" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:textColor="#80DEEA" android:textSize="16sp" />
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:orientation="horizontal" android:gravity="center_vertical">
+        <androidx.appcompat.widget.SwitchCompat android:id="@+id/media_mapping_enabled" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Enable Media mapping" android:textColor="#FFFFFF" android:textSize="18sp" />
+        <Button android:id="@+id/select_media_app" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="20dp" android:text="Select app" />
+    </LinearLayout>
+    <TextView android:id="@+id/media_mapping_status" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:textColor="#80DEEA" android:textSize="16sp" />
+    <TextView android:id="@+id/inputs" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="22dp" android:textColor="#E3F2FD" android:textSize="16sp" />
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="18dp" android:text="Live remote / keyboard console (newest first)" android:textColor="#FFFFFF" android:textSize="18sp" />
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="Shows every key Android delivers to this service: action, keycode, scan code, repeat count, device ID, source, and flags." android:textColor="#B9C5CE" android:textSize="14sp" />
+    <ScrollView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:layout_marginTop="8dp" android:background="#060A0D" android:fillViewport="true" android:scrollbars="vertical">
+        <TextView android:id="@+id/log" android:layout_width="match_parent" android:layout_height="wrap_content" android:fontFamily="monospace" android:padding="14dp" android:textColor="#9CFFB0" android:textIsSelectable="true" android:textSize="13sp" />
+    </ScrollView>
+</LinearLayout>
