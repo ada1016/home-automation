@@ -1,0 +1,515 @@
+obj:
+  id: light_grid
+  x: 34
+  y: 515
+  width: 652
+  height: 620
+  bg_opa: TRANSP
+  hidden: true
+  border_opa: TRANSP
+  pad_all: 0
+  widgets:
+    - obj:
+        id: slot0_card
+        x: 0
+        y: 0
+        width: 321
+        height: 303
+        styles: mono_panel
+        widgets:
+          - label: { id: v4_light_feedback_0, x: 10, y: 188, width: 300, height: 25, text: "", text_font: montserrat_16, text_align: CENTER }
+          - label: { id: slot0_icon, x: 10, y: 10, text: "\U0000F02A", text_font: fa_64, text_color: 0x111111 }
+          - label: { id: slot0_name, x: 88, y: 24, text: "全", text_font: cn_42, text_color: 0x111111 }
+          - switch:
+              id: slot0_switch
+              x: 205
+              y: 26
+              width: 96
+              height: 54
+              bg_color: 0xC8C8C8
+              indicator: { bg_color: 0x111111, bg_opa: COVER }
+              knob: { bg_color: 0xF7F7F4, bg_opa: COVER }
+              on_value:
+                - if:
+                    condition:
+                      lambda: 'return !id(syncing_ui);'
+                    then:
+                      - script.execute:
+                          id: v4_command
+                          action: light_power
+                          device: !lambda 'return id(slot0_local_devices);'
+                          value: !lambda 'return x ? std::string("on") : std::string("off");'
+
+          - button:
+              id: v4_cct_0_2700
+              pressed: { border_color: 0x1E5573, border_width: 4, border_opa: COVER }
+              x: 26
+              y: 125
+              width: 58
+              height: 58
+              radius: 29
+              bg_color: 0x6F6F6F
+              border_opa: TRANSP
+              shadow_opa: TRANSP
+              on_click:
+                - script.execute:
+                    id: v4_command
+                    action: light_cct
+                    device: !lambda 'return id(slot0_local_devices);'
+                    value: "2700"
+
+          - button:
+              id: v4_cct_0_3500
+              pressed: { border_color: 0x1E5573, border_width: 4, border_opa: COVER }
+              x: 96
+              y: 125
+              width: 58
+              height: 58
+              radius: 29
+              bg_color: 0x949494
+              border_opa: TRANSP
+              shadow_opa: TRANSP
+              on_click:
+                - script.execute:
+                    id: v4_command
+                    action: light_cct
+                    device: !lambda 'return id(slot0_local_devices);'
+                    value: "3500"
+
+          - button:
+              id: v4_cct_0_4500
+              pressed: { border_color: 0x1E5573, border_width: 4, border_opa: COVER }
+              x: 166
+              y: 125
+              width: 58
+              height: 58
+              radius: 29
+              bg_color: 0xBEBEBE
+              border_opa: TRANSP
+              shadow_opa: TRANSP
+              on_click:
+                - script.execute:
+                    id: v4_command
+                    action: light_cct
+                    device: !lambda 'return id(slot0_local_devices);'
+                    value: "4500"
+
+          - button:
+              id: v4_cct_0_6500
+              pressed: { border_color: 0x1E5573, border_width: 4, border_opa: COVER }
+              x: 236
+              y: 125
+              width: 58
+              height: 58
+              radius: 29
+              bg_color: 0xE7E7E7
+              border_color: 0x555555
+              border_width: 1
+              shadow_opa: TRANSP
+              on_click:
+                - script.execute:
+                    id: v4_command
+                    action: light_cct
+                    device: !lambda 'return id(slot0_local_devices);'
+                    value: "6500"
+
+          - slider:
+              id: slot0_slider
+              x: 28
+              y: 220
+              width: 264
+              height: 34
+              min_value: 0
+              max_value: 100
+              value: 50
+              bg_color: 0xD8D8D8
+              indicator: { bg_color: 0x111111, bg_opa: COVER }
+              knob: { bg_color: 0x111111, bg_opa: COVER }
+              on_press:
+                - lambda: |-
+                    tab5_v4::state().start_drag(id(slot0_local_devices),millis());
+              on_release:
+                - lambda: 'tab5_v4::state().end_drag(id(slot0_local_devices));'
+                - script.execute:
+                    id: v4_command
+                    action: light_brightness
+                    device: !lambda 'return id(slot0_local_devices);'
+                    value: !lambda 'return std::to_string((int) x);'
+    - obj:
+        id: slot1_card
+        x: 331
+        y: 0
+        width: 321
+        height: 303
+        styles: mono_panel
+        widgets:
+          - label: { id: v4_light_feedback_1, x: 10, y: 188, width: 300, height: 25, text: "", text_font: montserrat_16, text_align: CENTER }
+          - label: { id: slot1_icon, x: 10, y: 10, text: "\U0000F02A", text_font: fa_64, text_color: 0x111111 }
+          - label: { id: slot1_name, x: 88, y: 24, text: "全", text_font: cn_42, text_color: 0x111111 }
+          - switch:
+              id: slot1_switch
+              x: 205
+              y: 26
+              width: 96
+              height: 54
+              bg_color: 0xC8C8C8
+              indicator: { bg_color: 0x111111, bg_opa: COVER }
+              knob: { bg_color: 0xF7F7F4, bg_opa: COVER }
+              on_value:
+                - if:
+                    condition:
+                      lambda: 'return !id(syncing_ui);'
+                    then:
+                      - script.execute:
+                          id: v4_command
+                          action: light_power
+                          device: !lambda 'return id(slot1_local_devices);'
+                          value: !lambda 'return x ? std::string("on") : std::string("off");'
+
+          - button:
+              id: v4_cct_1_2700
+              pressed: { border_color: 0x1E5573, border_width: 4, border_opa: COVER }
+              x: 26
+              y: 125
+              width: 58
+              height: 58
+              radius: 29
+              bg_color: 0x6F6F6F
+              border_opa: TRANSP
+              shadow_opa: TRANSP
+              on_click:
+                - script.execute:
+                    id: v4_command
+                    action: light_cct
+                    device: !lambda 'return id(slot1_local_devices);'
+                    value: "2700"
+
+          - button:
+              id: v4_cct_1_3500
+              pressed: { border_color: 0x1E5573, border_width: 4, border_opa: COVER }
+              x: 96
+              y: 125
+              width: 58
+              height: 58
+              radius: 29
+              bg_color: 0x949494
+              border_opa: TRANSP
+              shadow_opa: TRANSP
+              on_click:
+                - script.execute:
+                    id: v4_command
+                    action: light_cct
+                    device: !lambda 'return id(slot1_local_devices);'
+                    value: "3500"
+
+          - button:
+              id: v4_cct_1_4500
+              pressed: { border_color: 0x1E5573, border_width: 4, border_opa: COVER }
+              x: 166
+              y: 125
+              width: 58
+              height: 58
+              radius: 29
+              bg_color: 0xBEBEBE
+              border_opa: TRANSP
+              shadow_opa: TRANSP
+              on_click:
+                - script.execute:
+                    id: v4_command
+                    action: light_cct
+                    device: !lambda 'return id(slot1_local_devices);'
+                    value: "4500"
+
+          - button:
+              id: v4_cct_1_6500
+              pressed: { border_color: 0x1E5573, border_width: 4, border_opa: COVER }
+              x: 236
+              y: 125
+              width: 58
+              height: 58
+              radius: 29
+              bg_color: 0xE7E7E7
+              border_color: 0x555555
+              border_width: 1
+              shadow_opa: TRANSP
+              on_click:
+                - script.execute:
+                    id: v4_command
+                    action: light_cct
+                    device: !lambda 'return id(slot1_local_devices);'
+                    value: "6500"
+
+          - slider:
+              id: slot1_slider
+              x: 28
+              y: 220
+              width: 264
+              height: 34
+              min_value: 0
+              max_value: 100
+              value: 50
+              bg_color: 0xD8D8D8
+              indicator: { bg_color: 0x111111, bg_opa: COVER }
+              knob: { bg_color: 0x111111, bg_opa: COVER }
+              on_press:
+                - lambda: |-
+                    tab5_v4::state().start_drag(id(slot1_local_devices),millis());
+              on_release:
+                - lambda: 'tab5_v4::state().end_drag(id(slot1_local_devices));'
+                - script.execute:
+                    id: v4_command
+                    action: light_brightness
+                    device: !lambda 'return id(slot1_local_devices);'
+                    value: !lambda 'return std::to_string((int) x);'
+    - obj:
+        id: slot2_card
+        x: 0
+        y: 313
+        width: 321
+        height: 303
+        styles: mono_panel
+        widgets:
+          - label: { id: v4_light_feedback_2, x: 10, y: 188, width: 300, height: 25, text: "", text_font: montserrat_16, text_align: CENTER }
+          - label: { id: slot2_icon, x: 10, y: 10, text: "\U0000F02A", text_font: fa_64, text_color: 0x111111 }
+          - label: { id: slot2_name, x: 88, y: 24, text: "全", text_font: cn_42, text_color: 0x111111 }
+          - switch:
+              id: slot2_switch
+              x: 205
+              y: 26
+              width: 96
+              height: 54
+              bg_color: 0xC8C8C8
+              indicator: { bg_color: 0x111111, bg_opa: COVER }
+              knob: { bg_color: 0xF7F7F4, bg_opa: COVER }
+              on_value:
+                - if:
+                    condition:
+                      lambda: 'return !id(syncing_ui);'
+                    then:
+                      - script.execute:
+                          id: v4_command
+                          action: light_power
+                          device: !lambda 'return id(slot2_local_devices);'
+                          value: !lambda 'return x ? std::string("on") : std::string("off");'
+
+          - button:
+              id: v4_cct_2_2700
+              pressed: { border_color: 0x1E5573, border_width: 4, border_opa: COVER }
+              x: 26
+              y: 125
+              width: 58
+              height: 58
+              radius: 29
+              bg_color: 0x6F6F6F
+              border_opa: TRANSP
+              shadow_opa: TRANSP
+              on_click:
+                - script.execute:
+                    id: v4_command
+                    action: light_cct
+                    device: !lambda 'return id(slot2_local_devices);'
+                    value: "2700"
+
+          - button:
+              id: v4_cct_2_3500
+              pressed: { border_color: 0x1E5573, border_width: 4, border_opa: COVER }
+              x: 96
+              y: 125
+              width: 58
+              height: 58
+              radius: 29
+              bg_color: 0x949494
+              border_opa: TRANSP
+              shadow_opa: TRANSP
+              on_click:
+                - script.execute:
+                    id: v4_command
+                    action: light_cct
+                    device: !lambda 'return id(slot2_local_devices);'
+                    value: "3500"
+
+          - button:
+              id: v4_cct_2_4500
+              pressed: { border_color: 0x1E5573, border_width: 4, border_opa: COVER }
+              x: 166
+              y: 125
+              width: 58
+              height: 58
+              radius: 29
+              bg_color: 0xBEBEBE
+              border_opa: TRANSP
+              shadow_opa: TRANSP
+              on_click:
+                - script.execute:
+                    id: v4_command
+                    action: light_cct
+                    device: !lambda 'return id(slot2_local_devices);'
+                    value: "4500"
+
+          - button:
+              id: v4_cct_2_6500
+              pressed: { border_color: 0x1E5573, border_width: 4, border_opa: COVER }
+              x: 236
+              y: 125
+              width: 58
+              height: 58
+              radius: 29
+              bg_color: 0xE7E7E7
+              border_color: 0x555555
+              border_width: 1
+              shadow_opa: TRANSP
+              on_click:
+                - script.execute:
+                    id: v4_command
+                    action: light_cct
+                    device: !lambda 'return id(slot2_local_devices);'
+                    value: "6500"
+
+          - slider:
+              id: slot2_slider
+              x: 28
+              y: 220
+              width: 264
+              height: 34
+              min_value: 0
+              max_value: 100
+              value: 50
+              bg_color: 0xD8D8D8
+              indicator: { bg_color: 0x111111, bg_opa: COVER }
+              knob: { bg_color: 0x111111, bg_opa: COVER }
+              on_press:
+                - lambda: |-
+                    tab5_v4::state().start_drag(id(slot2_local_devices),millis());
+              on_release:
+                - lambda: 'tab5_v4::state().end_drag(id(slot2_local_devices));'
+                - script.execute:
+                    id: v4_command
+                    action: light_brightness
+                    device: !lambda 'return id(slot2_local_devices);'
+                    value: !lambda 'return std::to_string((int) x);'
+    - obj:
+        id: slot3_card
+        x: 331
+        y: 313
+        width: 321
+        height: 303
+        styles: mono_panel
+        widgets:
+          - label: { id: v4_light_feedback_3, x: 10, y: 188, width: 300, height: 25, text: "", text_font: montserrat_16, text_align: CENTER }
+          - label: { id: slot3_icon, x: 10, y: 10, text: "\U0000F02A", text_font: fa_64, text_color: 0x111111 }
+          - label: { id: slot3_name, x: 88, y: 24, text: "全", text_font: cn_42, text_color: 0x111111 }
+          - switch:
+              id: slot3_switch
+              x: 205
+              y: 26
+              width: 96
+              height: 54
+              bg_color: 0xC8C8C8
+              indicator: { bg_color: 0x111111, bg_opa: COVER }
+              knob: { bg_color: 0xF7F7F4, bg_opa: COVER }
+              on_value:
+                - if:
+                    condition:
+                      lambda: 'return !id(syncing_ui);'
+                    then:
+                      - script.execute:
+                          id: v4_command
+                          action: light_power
+                          device: !lambda 'return id(slot3_local_devices);'
+                          value: !lambda 'return x ? std::string("on") : std::string("off");'
+
+          - button:
+              id: v4_cct_3_2700
+              pressed: { border_color: 0x1E5573, border_width: 4, border_opa: COVER }
+              x: 26
+              y: 125
+              width: 58
+              height: 58
+              radius: 29
+              bg_color: 0x6F6F6F
+              border_opa: TRANSP
+              shadow_opa: TRANSP
+              on_click:
+                - script.execute:
+                    id: v4_command
+                    action: light_cct
+                    device: !lambda 'return id(slot3_local_devices);'
+                    value: "2700"
+
+          - button:
+              id: v4_cct_3_3500
+              pressed: { border_color: 0x1E5573, border_width: 4, border_opa: COVER }
+              x: 96
+              y: 125
+              width: 58
+              height: 58
+              radius: 29
+              bg_color: 0x949494
+              border_opa: TRANSP
+              shadow_opa: TRANSP
+              on_click:
+                - script.execute:
+                    id: v4_command
+                    action: light_cct
+                    device: !lambda 'return id(slot3_local_devices);'
+                    value: "3500"
+
+          - button:
+              id: v4_cct_3_4500
+              pressed: { border_color: 0x1E5573, border_width: 4, border_opa: COVER }
+              x: 166
+              y: 125
+              width: 58
+              height: 58
+              radius: 29
+              bg_color: 0xBEBEBE
+              border_opa: TRANSP
+              shadow_opa: TRANSP
+              on_click:
+                - script.execute:
+                    id: v4_command
+                    action: light_cct
+                    device: !lambda 'return id(slot3_local_devices);'
+                    value: "4500"
+
+          - button:
+              id: v4_cct_3_6500
+              pressed: { border_color: 0x1E5573, border_width: 4, border_opa: COVER }
+              x: 236
+              y: 125
+              width: 58
+              height: 58
+              radius: 29
+              bg_color: 0xE7E7E7
+              border_color: 0x555555
+              border_width: 1
+              shadow_opa: TRANSP
+              on_click:
+                - script.execute:
+                    id: v4_command
+                    action: light_cct
+                    device: !lambda 'return id(slot3_local_devices);'
+                    value: "6500"
+
+          - slider:
+              id: slot3_slider
+              x: 28
+              y: 220
+              width: 264
+              height: 34
+              min_value: 0
+              max_value: 100
+              value: 50
+              bg_color: 0xD8D8D8
+              indicator: { bg_color: 0x111111, bg_opa: COVER }
+              knob: { bg_color: 0x111111, bg_opa: COVER }
+              on_press:
+                - lambda: |-
+                    tab5_v4::state().start_drag(id(slot3_local_devices),millis());
+              on_release:
+                - lambda: 'tab5_v4::state().end_drag(id(slot3_local_devices));'
+                - script.execute:
+                    id: v4_command
+                    action: light_brightness
+                    device: !lambda 'return id(slot3_local_devices);'
+                    value: !lambda 'return std::to_string((int) x);'

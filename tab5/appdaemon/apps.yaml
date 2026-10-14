@@ -1,0 +1,41 @@
+# Merge this single app entry into existing apps.yaml. Do not replace other apps.
+tab5_v4_bridge:
+  module: tab5_bridge_v4
+  class: Tab5V4Bridge
+
+  gas_reading_entity: input_text.gas_meter_reading
+  gas_submit_button: input_button.submit_gas_meter
+  gas_status_entity: sensor.gas_meter_submission_status
+
+  ac_brother: climate.280060372jia_daikin_ge
+  ac_sister: climate.280060372jia_daikin_mei
+  ac_parents: climate.280060372jia_daikin_ba_ma
+  ac_living: climate.living_room_daikin_ke
+
+  light_bedroom_window: light.ftd_cn_1116454231_dsplmp_s_2_light
+  light_living_room: light.ftd_cn_1101584272_dsplmp_s_2_light
+  light_da_head: light.lemesh_cn_1119408926_wy0c15_s_2_light
+  light_da_foot: light.lemesh_cn_1119650058_wy0c15_s_2_light
+  light_da_desk: light.lemesh_cn_1120969258_wy0c15_s_2_light
+  light_am_door: light.lemesh_cn_1119408936_wy0c15_s_2_light
+  light_am_foot: light.lemesh_cn_1119649699_wy0c15_s_2_light
+  light_am_desk: light.lemesh_cn_1119409647_wy0c15_s_2_light
+
+  humidity_all: ""
+
+  temperature_living: sensor.xiaomi_sg_blt_1_1q77vf2ed4g01_minigl_temperature_p_2_1001
+  humidity_living: sensor.xiaomi_sg_blt_1_1q77vf2ed4g01_minigl_relative_humidity_p_2_1002
+  ac_humidity_living: sensor.living_room_daikin_ke_target_humidity
+
+  temperature_parents: sensor.xiaomi_sg_blt_1_1q78027a54g03_minigl_temperature_p_2_1001
+  humidity_parents: sensor.xiaomi_sg_blt_1_1q78027a54g03_minigl_relative_humidity_p_2_1002
+  ac_humidity_parents: sensor.280060372jia_daikin_ba_ma_target_humidity
+
+  temperature_darren: sensor.xiaomi_sg_blt_1_1q780gjkh4g00_minigl_temperature_p_2_1001
+  humidity_darren: sensor.xiaomi_sg_blt_1_1q780gjkh4g00_minigl_relative_humidity_p_2_1002
+  ac_humidity_darren: sensor.280060372jia_daikin_ge_target_humidity
+
+  temperature_amber: sensor.xiaomi_sg_blt_1_1q780s5a14o00_minigl_temperature_p_2_1001
+  humidity_amber: sensor.xiaomi_sg_blt_1_1q780s5a14o00_minigl_relative_humidity_p_2_1002
+  ac_humidity_amber: sensor.280060372jia_daikin_mei_target_humidity
+
