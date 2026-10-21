@@ -48,14 +48,14 @@ These are non-standard vendor keycodes (all are above Android’s public keycode
 The current ready-to-install debug APK is:
 
 ```text
-releases/TCL-Remote-Mapper-v0.4.8.apk
+releases/TCL-Remote-Mapper-v0.4.11.apk
 ```
 
 Connect ADB and install:
 
 ```bash
 adb connect TV_LAN_IP:5555
-adb install -r releases/TCL-Remote-Mapper-v0.4.8.apk
+adb install -r releases/TCL-Remote-Mapper-v0.4.11.apk
 adb shell monkey -p io.github.tclremotemapper 1
 ```
 
@@ -78,6 +78,14 @@ v0.4.6 provides a dedicated 320×180 Android TV banner with a high-contrast remo
 ## Remote-style configuration screen
 
 v0.4.8 removes the in-app Accessibility shortcut and presents the six configuration cards in the physical remote order: Netflix | Prime Video, Guard | Media, YouTube | TCL Channel. Each card shows a source-button icon, an arrow, and the selected destination's installed-app icon or HDMI icon. The optional engineering controls (Refresh, Clear log, and Diagnose mode) sit below the grid, above the event console.
+
+## Save and load configuration
+
+The Engineering tools section includes **Save config** and **Load config**.
+
+- **Save config** writes one file directly to `Download/TCL_Remapp/tcl-remote-mapper-config.json`; it never opens an app or folder picker.
+- Later saves replace that one file. **Load config** imports and validates that same file before replacing the six mappings.
+- The feature uses Android's scoped Downloads storage and does not require broad storage permission.
 
 ## ADB diagnostics
 

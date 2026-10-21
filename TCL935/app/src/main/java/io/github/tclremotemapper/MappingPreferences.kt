@@ -2,6 +2,8 @@ package io.github.tclremotemapper
 
 import android.content.Context
 import android.view.KeyEvent
+import org.json.JSONArray
+import org.json.JSONObject
 
 /** Persistent per-button configuration and one-time migration of the v0.3 settings. */
 object MappingPreferences {
@@ -82,6 +84,55 @@ object MappingPreferences {
 
     fun mappingForEvent(context: Context, event: KeyEvent): ButtonMapping? = allMappings(context).firstOrNull { mapping ->
         mapping.enabled && mapping.isLearned && mapping.keyCode == event.keyCode
+    }
+
+    fun exportConfig(context: Context): JSONObject = JSONObject().apply {
+        put("schemaVersion", 1)
+        put("application", "TCL Remote Mapper")
+        put("mappings", JSONArray().apply {
+            allMappings(context).forEach { mapping ->
+                put(JSONObject().apply {
+                    put("button", mapping.button.id)
+                    put("enabled", mapping.enabled)
+                    put("keyCode", mapping.keyCode ?: JSONObject.NULL)
+                    put("scanCode", mapping.scanCode ?: JSONObject.NULL)
+                    put("destinationType", mapping.destinationType?.name ?: JSONObject.NULL)
+                    put("destinationValue", mapping.destinationValue ?: JSONObject.NULL)
+                })
+            }
+        })
+    }
+
+    fun importConfig(context: Context, source: JSONObject): Result<Unit> = runCatching {
+        require(source.optInt("schemaVersion", 0) == 1) { "Unsupported config format." }
+        val mappings = source.optJSONArray("mappings") ?: error("Config contains no mappings.")
+        val parsed = mutableMapOf<RemoteButton, JSONObject>()
+        for (index in 0 until mappings.length()) {
+            val item = mappings.getJSONObject(index)
+            val button = RemoteButton.entries.firstOrNull { it.id == item.getString("button") }
+                ?: error("Unknown remote button in config.")
+            parsed[button] = item
+        }
+        require(parsed.isNotEmpty()) { "Config contains no valid mappings." }
+
+        val edit = prefs(context).edit()
+        RemoteButton.entries.forEach { button ->
+            edit.remove(keyCodeKey(button)).remove(scanCodeKey(button)).remove(enabledKey(button))
+                .remove(destinationTypeKey(button)).remove(destinationValueKey(button))
+        }
+        parsed.forEach { (button, item) ->
+            if (!item.isNull("keyCode")) edit.putInt(keyCodeKey(button), item.getInt("keyCode"))
+            if (!item.isNull("scanCode")) edit.putInt(scanCodeKey(button), item.getInt("scanCode"))
+            edit.putBoolean(enabledKey(button), item.optBoolean("enabled", false))
+            if (!item.isNull("destinationType")) {
+                val type = runCatching { DestinationType.valueOf(item.getString("destinationType")) }.getOrNull()
+                    ?: error("Invalid destination type.")
+                val value = item.optString("destinationValue", "")
+                require(value.isNotBlank()) { "Destination value is missing." }
+                putDestination(edit, button, type, value)
+            }
+        }
+        edit.putBoolean(MIGRATED, true).apply()
     }
 
     private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)

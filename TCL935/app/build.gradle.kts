@@ -11,8 +11,8 @@ android {
         applicationId = "io.github.tclremotemapper"
         minSdk = 26
         targetSdk = 35
-        versionCode = 13
-        versionName = "0.4.8-engineering-tools-bottom"
+        versionCode = 16
+        versionName = "0.4.11-tcl-remapp-config-location"
     }
 
     compileOptions {

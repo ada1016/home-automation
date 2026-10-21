@@ -46,6 +46,8 @@ class MainActivity : AppCompatActivity() {
         keyLogging = findViewById(R.id.key_logging)
         findViewById<Button>(R.id.refresh).setOnClickListener { refresh() }
         findViewById<Button>(R.id.clear).setOnClickListener { DiagnosticLog.clear(this); refreshLog() }
+        findViewById<Button>(R.id.save_config).setOnClickListener { saveConfig() }
+        findViewById<Button>(R.id.load_config).setOnClickListener { loadConfig() }
         keyLogging.setOnCheckedChangeListener { _, enabled ->
             DiagnosticLog.setKeyEventLoggingEnabled(this, enabled)
             updateLoggingUi()
@@ -300,6 +302,34 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun refreshLog() { log.text = DiagnosticLog.read(this) }
+
+    private fun saveConfig() {
+        ConfigBackup.save(this)
+            .onSuccess {
+                DiagnosticLog.append(this, "Configuration saved: ${ConfigBackup.RELATIVE_PATH}${ConfigBackup.FILE_NAME}")
+                refreshLog()
+            }
+            .onFailure { error -> showConfigError("Save failed", error) }
+    }
+
+    private fun loadConfig() {
+        ConfigBackup.load(this)
+            .onSuccess {
+                DiagnosticLog.append(this, "Configuration loaded: ${ConfigBackup.RELATIVE_PATH}${ConfigBackup.FILE_NAME}")
+                refresh()
+            }
+            .onFailure { error -> showConfigError("Load failed", error) }
+    }
+
+    private fun showConfigError(title: String, error: Throwable) {
+        DiagnosticLog.append(this, "$title: ${error.message ?: error.javaClass.simpleName}")
+        AlertDialog.Builder(this)
+            .setTitle(title)
+            .setMessage(error.message ?: "Android could not access the selected file.")
+            .setPositiveButton("OK", null)
+            .show()
+        refreshLog()
+    }
 
     private fun updateLoggingUi() {
         val enabled = DiagnosticLog.isKeyEventLoggingEnabled(this)
