@@ -3,6 +3,9 @@
         <item name="android:fontFamily">sans</item>
         <item name="android:windowActionModeOverlay">true</item>
         <item name="android:colorAccent">#40C4FF</item>
+        <item name="android:colorControlHighlight">#FFCA28</item>
+        <item name="colorPrimary">#00D9FF</item>
+        <item name="colorSecondary">#FFCA28</item>
         <item name="android:windowBackground">#101418</item>
     </style>
 </resources>

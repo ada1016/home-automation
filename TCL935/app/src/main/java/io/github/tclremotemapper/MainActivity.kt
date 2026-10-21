@@ -10,8 +10,14 @@ import android.media.tv.TvInputInfo
 import android.media.tv.TvInputManager
 import android.os.Bundle
 import android.provider.Settings
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
+import android.view.Gravity
 import android.view.View
 import android.widget.Button
+import android.widget.GridLayout
+import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -19,41 +25,30 @@ import androidx.appcompat.widget.SwitchCompat
 
 class MainActivity : AppCompatActivity() {
     private lateinit var status: TextView
-    private lateinit var inputs: TextView
+    private lateinit var mappingContainer: GridLayout
     private lateinit var log: TextView
-    private lateinit var mappingEnabled: SwitchCompat
-    private lateinit var mappingStatus: TextView
-    private lateinit var mediaMappingEnabled: SwitchCompat
-    private lateinit var mediaMappingStatus: TextView
+    private lateinit var keyLogging: SwitchCompat
 
     private val updates = object : BroadcastReceiver() {
+        // Key events arrive while the user is navigating this screen. Rebuilding the cards
+        // here discards Android TV's focused View and sends focus back to the first control.
+        // Mapping/configuration changes explicitly call refresh() themselves.
         override fun onReceive(context: Context, intent: Intent) = refreshLog()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        MappingPreferences.ensureMigrated(this)
         status = findViewById(R.id.status)
-        inputs = findViewById(R.id.inputs)
+        mappingContainer = findViewById(R.id.mapping_container)
         log = findViewById(R.id.log)
-        mappingEnabled = findViewById(R.id.mapping_enabled)
-        mappingStatus = findViewById(R.id.mapping_status)
-        mediaMappingEnabled = findViewById(R.id.media_mapping_enabled)
-        mediaMappingStatus = findViewById(R.id.media_mapping_status)
-        findViewById<Button>(R.id.open_accessibility).setOnClickListener {
-            openAccessibilitySettings()
-        }
+        keyLogging = findViewById(R.id.key_logging)
         findViewById<Button>(R.id.refresh).setOnClickListener { refresh() }
         findViewById<Button>(R.id.clear).setOnClickListener { DiagnosticLog.clear(this); refreshLog() }
-        findViewById<Button>(R.id.select_input).setOnClickListener { chooseInput() }
-        findViewById<Button>(R.id.select_media_app).setOnClickListener { chooseMediaApp() }
-        mappingEnabled.setOnCheckedChangeListener { _, checked ->
-            MappingPreferences.setEnabled(this, checked)
-            updateMappingStatus()
-        }
-        mediaMappingEnabled.setOnCheckedChangeListener { _, checked ->
-            MappingPreferences.setMediaEnabled(this, checked)
-            updateMappingStatus()
+        keyLogging.setOnCheckedChangeListener { _, enabled ->
+            DiagnosticLog.setKeyEventLoggingEnabled(this, enabled)
+            updateLoggingUi()
         }
     }
 
@@ -69,83 +64,227 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun refresh() {
-        val enabled = isServiceEnabled()
-        status.text = if (enabled) {
-            "Status: accessibility service ENABLED. Android may still withhold system-reserved or app-launch keys."
+        val diagnostics = if (DiagnosticLog.isKeyEventLoggingEnabled(this)) "ON" else "OFF"
+        status.text = if (isServiceEnabled()) {
+            "Accessibility service: ENABLED · Diagnose mode: $diagnostics"
         } else {
-            "Status: accessibility service DISABLED. Select Enable diagnostics, then enable TCL Remote Diagnostics."
+            "Accessibility service: DISABLED · Enable TCL Remote Mapper in TV Accessibility settings."
         }
-        inputs.text = enumerateInputs()
-        mappingEnabled.setOnCheckedChangeListener(null)
-        mappingEnabled.isChecked = MappingPreferences.enabled(this)
-        mappingEnabled.setOnCheckedChangeListener { _, checked ->
-            MappingPreferences.setEnabled(this, checked)
-            updateMappingStatus()
-        }
-        mediaMappingEnabled.setOnCheckedChangeListener(null)
-        mediaMappingEnabled.isChecked = MappingPreferences.mediaEnabled(this)
-        mediaMappingEnabled.setOnCheckedChangeListener { _, checked ->
-            MappingPreferences.setMediaEnabled(this, checked)
-            updateMappingStatus()
-        }
-        updateMappingStatus()
+        renderMappings()
+        updateLoggingUi()
         refreshLog()
     }
 
-    private fun refreshLog() { log.text = DiagnosticLog.read(this) }
-
-    private fun updateMappingStatus() {
-        val selected = currentInput()?.let { "${it.loadLabel(this)} (${it.id})" } ?: "no input selected"
-        val enabled = if (MappingPreferences.enabled(this)) "ON" else "OFF"
-        mappingStatus.text = "Prime mapping: $enabled · Destination: $selected"
-        val mediaEnabled = if (MappingPreferences.mediaEnabled(this)) "ON" else "OFF"
-        val app = mediaAppLabel()
-        mediaMappingStatus.text = "Media mapping: $mediaEnabled · Destination: $app"
+    private fun renderMappings() {
+        mappingContainer.removeAllViews()
+        RemoteButton.entries.forEach { button ->
+            val mapping = MappingPreferences.mapping(this, button)
+            mappingContainer.addView(mappingCard(mapping), gridParams())
+        }
     }
 
-    private fun chooseInput() {
-        val manager = getSystemService(TV_INPUT_SERVICE) as? TvInputManager ?: return
-        val candidates = manager.tvInputList.filter { it.isPassthroughInput }
-        if (candidates.isEmpty()) {
-            DiagnosticLog.append(this, "No passthrough inputs visible for selection.")
-            refreshLog()
-            return
+    private fun mappingCard(mapping: ButtonMapping): View {
+        val card = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(18), dp(14), dp(18), dp(14))
+            background = roundedBackground("#1B2630", "#486273")
         }
-        val labels = candidates.map { "${it.loadLabel(this)}\n${it.id}" }.toTypedArray()
+        card.addView(LinearLayout(this).apply {
+            gravity = Gravity.CENTER_VERTICAL
+            addView(ImageView(this@MainActivity).apply {
+                setImageResource(mapping.button.iconRes)
+                contentDescription = mapping.button.label
+                layoutParams = LinearLayout.LayoutParams(dp(52), dp(52))
+            })
+            addView(TextView(this@MainActivity).apply {
+                text = mapping.button.label
+                setTextColor(Color.WHITE)
+                textSize = 20f
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                    marginStart = dp(12)
+                }
+            })
+            addView(TextView(this@MainActivity).apply {
+                text = "→"
+                setTextColor(Color.parseColor("#80DEEA"))
+                textSize = 28f
+            })
+            addView(destinationIcon(mapping).apply {
+                layoutParams = LinearLayout.LayoutParams(dp(52), dp(52)).apply { marginStart = dp(8) }
+            })
+        })
+        card.addView(TextView(this).apply {
+            text = destinationTitle(mapping)
+            setTextColor(Color.WHITE)
+            textSize = 17f
+            setPadding(0, dp(12), 0, 0)
+        })
+        card.addView(TextView(this).apply {
+            text = if (mapping.enabled) "Mapping enabled" else "Destination not enabled"
+            setTextColor(Color.parseColor("#B9C5CE"))
+            textSize = 14f
+            setPadding(0, dp(4), 0, 0)
+        })
+        card.addView(LinearLayout(this).apply {
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, dp(8), 0, 0)
+            addView(SwitchCompat(this@MainActivity).apply {
+                text = if (mapping.enabled) "Mapping enabled" else "Mapping disabled"
+                setTextColor(Color.WHITE)
+                textSize = 16f
+                background = getDrawable(R.drawable.tv_switch_focus_background)
+                minimumHeight = dp(52)
+                setPadding(dp(12), 0, dp(12), 0)
+                isChecked = mapping.enabled
+                setOnCheckedChangeListener { _, enabled ->
+                    MappingPreferences.setEnabled(this@MainActivity, mapping.button, enabled)
+                    DiagnosticLog.append(this@MainActivity, "${mapping.button.label}: mapping ${if (enabled) "enabled" else "disabled"}")
+                    refresh()
+                }
+            })
+            addView(Button(this@MainActivity).apply {
+                text = "Configure"
+                isAllCaps = false
+                background = getDrawable(R.drawable.tv_button_background)
+                setTextColor(resources.getColorStateList(R.color.tv_button_text, theme))
+                minimumHeight = dp(52)
+                layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                    marginStart = dp(20)
+                }
+                setOnClickListener { showConfigure(mapping.button) }
+            })
+        })
+        return card
+    }
+
+    private fun gridParams() = GridLayout.LayoutParams(
+        GridLayout.spec(GridLayout.UNDEFINED, 1f),
+        GridLayout.spec(GridLayout.UNDEFINED, 1f),
+    ).apply {
+        width = 0
+        height = GridLayout.LayoutParams.WRAP_CONTENT
+        setMargins(0, 0, dp(16), dp(16))
+    }
+
+    private fun destinationIcon(mapping: ButtonMapping): ImageView = ImageView(this).apply {
+        when (mapping.destinationType) {
+            DestinationType.APP -> runCatching {
+                setImageDrawable(packageManager.getApplicationIcon(mapping.destinationValue!!))
+            }.getOrElse { setImageResource(R.drawable.ic_destination_empty) }
+            DestinationType.INPUT -> setImageResource(R.drawable.ic_hdmi)
+            null -> setImageResource(R.drawable.ic_destination_empty)
+        }
+        contentDescription = "Destination: ${destinationDescription(mapping)}"
+    }
+
+    private fun destinationTitle(mapping: ButtonMapping): String = when (mapping.destinationType) {
+        DestinationType.APP -> "Opens ${appLabel(mapping.destinationValue).substringBefore(" (")}" 
+        DestinationType.INPUT -> "Switches to ${inputLabel(mapping.destinationValue).substringBefore(" (")}" 
+        null -> "Choose a destination"
+    }
+
+    private fun showConfigure(button: RemoteButton) {
+        val choices = arrayOf(
+            "Choose app",
+            "Choose TV input",
+            "Learn this physical button",
+            "Clear destination",
+            "Clear learned key",
+        )
         AlertDialog.Builder(this)
-            .setTitle("Select destination input")
-            .setItems(labels) { _, which ->
-                MappingPreferences.setInputId(this, candidates[which].id)
-                updateMappingStatus()
-                DiagnosticLog.append(this, "Selected destination inputId=${candidates[which].id}")
+            .setTitle("Configure ${button.label}")
+            .setItems(choices) { _, which ->
+                when (which) {
+                    0 -> chooseApp(button)
+                    1 -> chooseInput(button)
+                    2 -> learnButton(button)
+                    3 -> {
+                        MappingPreferences.clearDestination(this, button)
+                        MappingPreferences.setEnabled(this, button, false)
+                        DiagnosticLog.append(this, "${button.label}: destination cleared")
+                        refresh()
+                    }
+                    4 -> {
+                        MappingPreferences.clearLearnedKey(this, button)
+                        MappingPreferences.setEnabled(this, button, false)
+                        DiagnosticLog.append(this, "${button.label}: learned key cleared")
+                        refresh()
+                    }
+                }
             }
             .show()
     }
 
-    private fun chooseMediaApp() {
-        val query = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER)
-        val apps = packageManager.queryIntentActivities(query, 0)
-            .filter { it.activityInfo.packageName != packageName }
-            .sortedBy { it.loadLabel(packageManager).toString().lowercase() }
+    private fun learnButton(button: RemoteButton) {
+        MappingPreferences.startLearning(this, button)
+        DiagnosticLog.append(this, "Learning ${button.label}: press its physical remote button once.")
+        AlertDialog.Builder(this)
+            .setTitle("Learning ${button.label}")
+            .setMessage("Press ${button.label} once on the physical remote. The mapper will save the key and prevent its original app from opening during this learning press. Return here afterward to select a destination.")
+            .setPositiveButton("Ready") { _, _ -> refresh() }
+            .setNegativeButton("Cancel") { _, _ -> MappingPreferences.finishLearning(this); refresh() }
+            .show()
+    }
+
+    private fun chooseApp(button: RemoteButton) {
+        val apps = tvLauncherApps()
         if (apps.isEmpty()) {
-            DiagnosticLog.append(this, "No TV launcher apps are visible for Media mapping.")
+            DiagnosticLog.append(this, "No visible launcher apps for ${button.label}.")
             refreshLog()
             return
         }
         val labels = apps.map { "${it.loadLabel(packageManager)}\n${it.activityInfo.packageName}" }.toTypedArray()
         AlertDialog.Builder(this)
-            .setTitle("Select Media destination app")
+            .setTitle("Select app for ${button.label}")
             .setItems(labels) { _, which ->
-                val selected = apps[which].activityInfo.packageName
-                MappingPreferences.setMediaPackage(this, selected)
-                DiagnosticLog.append(this, "Selected Media destination app=$selected")
-                updateMappingStatus()
+                val packageName = apps[which].activityInfo.packageName
+                MappingPreferences.setDestination(this, button, DestinationType.APP, packageName)
+                MappingPreferences.setEnabled(this, button, true)
+                DiagnosticLog.append(this, "${button.label}: app destination=$packageName")
+                refresh()
             }
             .show()
     }
 
-    private fun mediaAppLabel(): String {
-        val packageName = MappingPreferences.mediaPackage(this) ?: return "no app selected"
+    private fun chooseInput(button: RemoteButton) {
+        val manager = getSystemService(TV_INPUT_SERVICE) as? TvInputManager ?: return
+        val inputs = manager.tvInputList.filter { it.isPassthroughInput }.sortedBy { it.loadLabel(this).toString() }
+        if (inputs.isEmpty()) {
+            DiagnosticLog.append(this, "No passthrough TV inputs visible for ${button.label}.")
+            refreshLog()
+            return
+        }
+        val labels = inputs.map { "${it.loadLabel(this)}\n${it.id}" }.toTypedArray()
+        AlertDialog.Builder(this)
+            .setTitle("Select input for ${button.label}")
+            .setItems(labels) { _, which ->
+                MappingPreferences.setDestination(this, button, DestinationType.INPUT, inputs[which].id)
+                MappingPreferences.setEnabled(this, button, true)
+                DiagnosticLog.append(this, "${button.label}: input destination=${inputs[which].id}")
+                refresh()
+            }
+            .show()
+    }
+
+    private fun tvLauncherApps(): List<ResolveInfo> {
+        val intents = listOf(
+            Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER),
+            Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER),
+        )
+        return intents.flatMap { packageManager.queryIntentActivities(it, 0) }
+            .filter { it.activityInfo.packageName != packageName }
+            .distinctBy { it.activityInfo.packageName }
+            .sortedBy { it.loadLabel(packageManager).toString().lowercase() }
+    }
+
+    private fun destinationDescription(mapping: ButtonMapping): String = when (mapping.destinationType) {
+        DestinationType.APP -> appLabel(mapping.destinationValue)
+        DestinationType.INPUT -> inputLabel(mapping.destinationValue)
+        null -> "not selected"
+    }
+
+    private fun appLabel(packageName: String?): String {
+        if (packageName.isNullOrBlank()) return "not selected"
         return try {
             val info = packageManager.getApplicationInfo(packageName, 0)
             "${packageManager.getApplicationLabel(info)} ($packageName)"
@@ -154,20 +293,21 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun currentInput(): TvInputInfo? {
-        val id = MappingPreferences.inputId(this) ?: return null
-        val manager = getSystemService(TV_INPUT_SERVICE) as? TvInputManager ?: return null
-        return manager.tvInputList.firstOrNull { it.id == id }
+    private fun inputLabel(inputId: String?): String {
+        if (inputId.isNullOrBlank()) return "not selected"
+        val manager = getSystemService(TV_INPUT_SERVICE) as? TvInputManager ?: return inputId
+        return manager.tvInputList.firstOrNull { it.id == inputId }?.let { "${it.loadLabel(this)} ($inputId)" } ?: "$inputId (not currently visible)"
     }
 
-    private fun openAccessibilitySettings() {
-        // This Android 11 TCL Google TV resolves the generic Settings action to a
-        // framework stub. Its OEM TV action opens the real settings activity.
-        val tclTvAction = Intent("android.settings.ACCESSIBILITY_TV_OEM_LINK")
-        try {
-            startActivity(tclTvAction)
-        } catch (_: Exception) {
-            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+    private fun refreshLog() { log.text = DiagnosticLog.read(this) }
+
+    private fun updateLoggingUi() {
+        val enabled = DiagnosticLog.isKeyEventLoggingEnabled(this)
+        keyLogging.setOnCheckedChangeListener(null)
+        keyLogging.isChecked = enabled
+        keyLogging.setOnCheckedChangeListener { _, checked ->
+            DiagnosticLog.setKeyEventLoggingEnabled(this, checked)
+            updateLoggingUi()
         }
     }
 
@@ -177,28 +317,11 @@ class MainActivity : AppCompatActivity() {
         return enabled.split(':').any { it.equals(expected, ignoreCase = true) }
     }
 
-    private fun enumerateInputs(): String {
-        val manager = getSystemService(TV_INPUT_SERVICE) as? TvInputManager
-            ?: return "TV inputs: TvInputManager unavailable on this device."
-        return try {
-            val rows = manager.tvInputList.sortedBy { it.loadLabel(this).toString() }.map { input ->
-                val state = when (manager.getInputState(input.id)) {
-                    TvInputManager.INPUT_STATE_CONNECTED -> "connected"
-                    TvInputManager.INPUT_STATE_CONNECTED_STANDBY -> "standby"
-                    TvInputManager.INPUT_STATE_DISCONNECTED -> "disconnected"
-                    else -> "unknown"
-                }
-                val type = if (input.isPassthroughInput) "passthrough" else inputType(input.type)
-                "• ${input.loadLabel(this)}\n  id=${input.id}\n  type=$type, passthrough=${input.isPassthroughInput}, state=$state"
-            }
-            if (rows.isEmpty()) "TV inputs: none visible to this ordinary app." else "TV inputs visible to this app:\n${rows.joinToString("\n")}" 
-        } catch (e: SecurityException) {
-            "TV inputs: access denied: ${e.message}"
-        }
+    private fun roundedBackground(color: String, stroke: String) = GradientDrawable().apply {
+        setColor(Color.parseColor(color))
+        cornerRadius = dp(12).toFloat()
+        setStroke(dp(2), Color.parseColor(stroke))
     }
 
-    private fun inputType(type: Int) = when (type) {
-        TvInputInfo.TYPE_TUNER -> "tuner"
-        else -> "other($type)"
-    }
+    private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
 }

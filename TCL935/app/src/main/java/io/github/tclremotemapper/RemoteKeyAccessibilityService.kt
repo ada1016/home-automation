@@ -4,66 +4,106 @@ import android.accessibilityservice.AccessibilityService
 import android.content.ComponentName
 import android.content.Intent
 import android.media.tv.TvContract
-import android.util.Log
 import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
 
-/** Records keys delivered by Android and consumes only explicitly enabled mappings. */
+/** Receives keys Android makes available and consumes only configured shortcut mappings. */
 class RemoteKeyAccessibilityService : AccessibilityService() {
-    private var primeDownConsumed = false
-    private var mediaDownConsumed = false
+    private var consumedKeyCode: Int? = null
+    private var learningKeyCode: Int? = null
 
     override fun onServiceConnected() {
         super.onServiceConnected()
-        DiagnosticLog.append(this, "Accessibility service connected; key filtering requested.")
+        MappingPreferences.ensureMigrated(this)
+        DiagnosticLog.append(this, "Accessibility service connected; six-button key filtering ready.")
     }
 
     override fun onKeyEvent(event: KeyEvent): Boolean {
-        val line = buildString {
-            append("KEY action=").append(actionName(event.action))
-            append(" keyCode=").append(event.keyCode).append("(").append(KeyEvent.keyCodeToString(event.keyCode)).append(")")
-            append(" scanCode=").append(event.scanCode)
-            append(" repeat=").append(event.repeatCount)
-            append(" deviceId=").append(event.deviceId)
-            append(" source=0x").append(event.source.toString(16))
-            append(" flags=0x").append(event.flags.toString(16))
+        if (DiagnosticLog.isKeyEventLoggingEnabled(this)) {
+            DiagnosticLog.appendKeyEvent(this, buildString {
+                append("KEY action=").append(actionName(event.action))
+                append(" keyCode=").append(event.keyCode).append("(").append(KeyEvent.keyCodeToString(event.keyCode)).append(")")
+                append(" scanCode=").append(event.scanCode)
+                append(" repeat=").append(event.repeatCount)
+                append(" deviceId=").append(event.deviceId)
+                append(" source=0x").append(event.source.toString(16))
+                append(" flags=0x").append(event.flags.toString(16))
+            })
         }
-        Log.i(TAG, line)
-        DiagnosticLog.append(this, line)
 
-        return when {
-            event.keyCode == PRIME_KEYCODE && MappingPreferences.enabled(this) -> consumePrime(event)
-            event.keyCode == MEDIA_KEYCODE && MappingPreferences.mediaEnabled(this) -> consumeMedia(event)
-            else -> false
-        }
+        handleLearning(event)?.let { return it }
+        val mapping = MappingPreferences.mappingForEvent(this, event) ?: return false
+        return consumeMappedButton(event, mapping)
     }
 
-    private fun consumePrime(event: KeyEvent): Boolean = when (event.action) {
+    private fun handleLearning(event: KeyEvent): Boolean? {
+        val learning = MappingPreferences.learningButton(this) ?: return null
+        return when (event.action) {
             KeyEvent.ACTION_DOWN -> {
-                if (event.repeatCount == 0) switchToConfiguredInput()
-                primeDownConsumed = true
-                true // Consume DOWN and all repeats: TCL/Prime cannot launch.
+                if (event.repeatCount == 0) {
+                    MappingPreferences.learn(this, learning, event)
+                    MappingPreferences.finishLearning(this)
+                    learningKeyCode = event.keyCode
+                    DiagnosticLog.append(this, "Learned ${learning.label}: keyCode=${event.keyCode}, scanCode=${event.scanCode}")
+                }
+                true // Do not launch the button's original app while learning it.
             }
             KeyEvent.ACTION_UP -> {
-                val consumed = primeDownConsumed
-                primeDownConsumed = false
-                consumed // Consume the matching UP so it cannot trigger another action.
+                val consumed = learningKeyCode == event.keyCode
+                if (consumed) learningKeyCode = null
+                consumed
             }
             else -> true
+        }
     }
 
-    private fun consumeMedia(event: KeyEvent): Boolean = when (event.action) {
+    private fun consumeMappedButton(event: KeyEvent, mapping: ButtonMapping): Boolean = when (event.action) {
         KeyEvent.ACTION_DOWN -> {
-            if (event.repeatCount == 0) launchConfiguredMediaApp()
-            mediaDownConsumed = true
-            true // Consume repeats so a hold cannot relaunch Spotify.
+            if (event.repeatCount == 0) launchDestination(mapping)
+            consumedKeyCode = event.keyCode
+            true
         }
         KeyEvent.ACTION_UP -> {
-            val consumed = mediaDownConsumed
-            mediaDownConsumed = false
+            val consumed = consumedKeyCode == event.keyCode
+            if (consumed) consumedKeyCode = null
             consumed
         }
         else -> true
+    }
+
+    private fun launchDestination(mapping: ButtonMapping) {
+        val type = mapping.destinationType
+        val value = mapping.destinationValue
+        if (type == null || value.isNullOrBlank()) {
+            DiagnosticLog.append(this, "${mapping.button.label}: mapping skipped; select a destination first.")
+            return
+        }
+        try {
+            when (type) {
+                DestinationType.INPUT -> switchToInput(value)
+                DestinationType.APP -> launchApp(value)
+            }
+            DiagnosticLog.append(this, "${mapping.button.label}: launched ${type.name.lowercase()}=$value")
+        } catch (e: Exception) {
+            DiagnosticLog.append(this, "${mapping.button.label}: launch failed: ${e.javaClass.simpleName}: ${e.message}")
+        }
+    }
+
+    private fun switchToInput(inputId: String) {
+        // Verified on this TCL 65C935 / AR2101 firmware. The explicit TCL activity
+        // is required because the standard passthrough URI may resolve elsewhere.
+        val intent = Intent(Intent.ACTION_VIEW, TvContract.buildChannelUriForPassthroughInput(inputId))
+            .setComponent(ComponentName(TCL_TV_PACKAGE, TCL_TV_ACTIVITY))
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        startActivity(intent)
+    }
+
+    private fun launchApp(packageName: String) {
+        val intent = packageManager.getLeanbackLaunchIntentForPackage(packageName)
+            ?: packageManager.getLaunchIntentForPackage(packageName)
+            ?: throw IllegalStateException("No launcher activity for $packageName")
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        startActivity(intent)
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) = Unit
@@ -81,55 +121,8 @@ class RemoteKeyAccessibilityService : AccessibilityService() {
         else -> action.toString()
     }
 
-    private fun switchToConfiguredInput() {
-        val inputId = MappingPreferences.inputId(this)
-        if (inputId.isNullOrBlank()) {
-            DiagnosticLog.append(this, "Mapping skipped: no destination input selected.")
-            return
-        }
-        try {
-            // Verified on this 65C935 / AR2101 firmware. The standard URI alone
-            // resolves to another app, so direct it to TCL's exported TV activity.
-            val intent = Intent(Intent.ACTION_VIEW, TvContract.buildChannelUriForPassthroughInput(inputId))
-                .setComponent(ComponentName(TCL_TV_PACKAGE, TCL_TV_ACTIVITY))
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            startActivity(intent)
-            DiagnosticLog.append(this, "Mapping: switched to inputId=$inputId")
-        } catch (e: Exception) {
-            DiagnosticLog.append(this, "Mapping failed: ${e.javaClass.simpleName}: ${e.message}")
-        }
-    }
-
-    private fun launchConfiguredMediaApp() {
-        val packageName = MappingPreferences.mediaPackage(this)
-        if (packageName.isNullOrBlank()) {
-            DiagnosticLog.append(this, "Media mapping skipped: no destination app selected.")
-            return
-        }
-        try {
-            val fallback = if (packageName == SPOTIFY_PACKAGE) {
-                Intent().setComponent(ComponentName(SPOTIFY_PACKAGE, SPOTIFY_ACTIVITY))
-            } else {
-                null
-            }
-            val intent = packageManager.getLeanbackLaunchIntentForPackage(packageName)
-                ?: fallback
-                ?: throw IllegalStateException("No TV launcher activity for $packageName")
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            startActivity(intent)
-            DiagnosticLog.append(this, "Mapping: launched app=$packageName")
-        } catch (e: Exception) {
-            DiagnosticLog.append(this, "Media launch failed: ${e.javaClass.simpleName}: ${e.message}")
-        }
-    }
-
     private companion object {
-        const val TAG = "TclRemoteDiag"
-        const val PRIME_KEYCODE = 4099 // Observed on the user's TCL 65C935, Android 11 / AR2101.
-        const val MEDIA_KEYCODE = 4057 // TCL_USB_MEDIA, observed on this TCL 65C935 remote.
         const val TCL_TV_PACKAGE = "com.tcl.tv"
         const val TCL_TV_ACTIVITY = "com.tcl.tv.TVActivity"
-        const val SPOTIFY_PACKAGE = "com.spotify.tv.android"
-        const val SPOTIFY_ACTIVITY = "com.spotify.tv.android.SpotifyTVActivity"
     }
 }
